@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Multiplayer HTML5 + Web Sockets</title>
+</head>
+<body>
+  <canvas id="ctx" width="500" height="500" style="border: 1px solid #000;"></canvas>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
+  <script>
+    const ctx = document.getElementById('ctx').getContext('2d')
+    ctx.font = '30px Arial'
+
+    const socket = io()
+    socket.on('newPosition', data => {
+      ctx.clearRect(0, 0, 500, 500)
+      for (let i = 0; i < data.length; i++) {
+        ctx.fillText(data[i].number, data[i].x, data[i].y)
+      }
+    })
+
+    document.onkeydown = function(event) {
+      if (event.keyCode === 68)  //d
+        socket.emit('keyPress', {inputId: 'right', state: true})
+      else if (event.keyCode === 83) //s
+        socket.emit('keyPress', {inputId: 'down', state: true})
+      else if (event.keyCode === 65) //a
+        socket.emit('keyPress', {inputId: 'left', state: true})
+      else if (event.keyCode === 87) //w
+        socket.emit('keyPress', {inputId: 'up', state: true})
+    }
+    document.onkeyup = function(event) {
+      if (event.keyCode === 68)  //d
+        socket.emit('keyPress', {inputId: 'right', state: false})
+      else if (event.keyCode === 83) //s
+        socket.emit('keyPress', {inputId: 'down', state: false})
+      else if (event.keyCode === 65) //a
+        socket.emit('keyPress', {inputId: 'left', state: false})
+      else if (event.keyCode === 87) //w
+        socket.emit('keyPress', {inputId: 'up', state: false})
+    }
+  </script>
+</body>
+</html>
