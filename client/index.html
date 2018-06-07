@@ -9,18 +9,43 @@
 <body>
   <canvas id="ctx" width="500" height="500" style="border: 1px solid #000;"></canvas>
 
+  <div id="chat-text" style="width: 500px; height: 100px; overflow-y: scroll;">
+    <div>Hello!</div>
+  </div>
+
+  <form id="chat-form">
+    <input id="chat-input" type="text" style="width: " />
+  </form>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
   <script>
+    const chatText = document.getElementById('chat-text')
+    const chatInput = document.getElementById('chat-input')
+    const chatForm = document.getElementById('chat-form')
     const ctx = document.getElementById('ctx').getContext('2d')
     ctx.font = '30px Arial'
 
     const socket = io()
+
     socket.on('newPosition', data => {
       ctx.clearRect(0, 0, 500, 500)
-      for (let i = 0; i < data.length; i++) {
-        ctx.fillText(data[i].number, data[i].x, data[i].y)
-      }
+      // player
+      for (let i = 0; i < data.player.length; i++)
+          ctx.fillText(data.player[i].number, data.player[i].x, data.player[i].y)
+      // bullets
+      for (let i = 0; i < data.bullet.length; i++)
+          ctx.fillRect(data.bullet[i].x - 5, data.bullet[i].y - 5, 10, 10)
     })
+
+    socket.on('addToChat', function(data) {
+      chatText.innerHTML += '<div>' + data + '</div>'
+    })
+
+    chatForm.onsubmit = function(e) {
+      e.preventDefault()
+      socket.emit('sendMsgToServer', chatInput.value)
+      chatInput.value = ''
+    }
 
     document.onkeydown = function(event) {
       if (event.keyCode === 68)  //d

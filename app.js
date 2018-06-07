@@ -16,7 +16,9 @@ serv.listen(2000, () => {
 // game
 let SOCKET_LIST = {}
 
-var Entity = function(id) {
+// NOTE: OOP implemented in ES5 - no ES6 Classes.
+
+const Entity = function(id) {
   var self = {
     x: 250,
     y: 250,
@@ -34,7 +36,7 @@ var Entity = function(id) {
   return self
 }
 
-var Player = function(id) {
+const Player = function(id) {
   var self = Entity()
   self.id = id
   self.number = "" + Math.floor(10 * Math.random())
@@ -44,8 +46,8 @@ var Player = function(id) {
   self.pressingDown = false
   self.maxSpd = 10
 
-  var super_update = self.update
-
+  // interesting way of doing super()...
+  const super_update = self.update
   self.update = function() {
     self.updateSpd()
     super_update()
@@ -53,18 +55,18 @@ var Player = function(id) {
 
   self.updateSpd = function() {
     if(self.pressingRight)
-      self.spdX = self.maxSpd
+        self.spdX = self.maxSpd
     else if(self.pressingLeft)
-      self.spdX = -self.maxSpd
+        self.spdX = -self.maxSpd
     else
-      self.spdX = 0
+        self.spdX = 0
 
     if(self.pressingUp)
-      self.spdY = -self.maxSpd
+        self.spdY = -self.maxSpd
     else if(self.pressingDown)
-      self.spdY = self.maxSpd
+        self.spdY = self.maxSpd
     else
-      self.spdY = 0
+        self.spdY = 0
   }
   Player.list[id] = self
   return self
@@ -73,16 +75,16 @@ var Player = function(id) {
 Player.list = {}
 
 Player.onConnect = function(socket) {
-  var player = Player(socket.id)
+  const player = Player(socket.id)
   socket.on('keyPress', (data) => {
     if(data.inputId === 'left')
-      player.pressingLeft = data.state
+        player.pressingLeft = data.state
     else if(data.inputId === 'right')
-      player.pressingRight = data.state
+        player.pressingRight = data.state
     else if(data.inputId === 'up')
-      player.pressingUp = data.state
+        player.pressingUp = data.state
     else if(data.inputId === 'down')
-      player.pressingDown = data.state
+        player.pressingDown = data.state
   })
 }
 
@@ -104,21 +106,69 @@ Player.update = function() {
   return pack
 }
 
+const Bullet = function(angle) {
+  const self = Entity()
+  self.id = Math.random()
+  self.spdX = Math.cos(angle/180*Math.PI) * 10
+  self.spdY = Math.sin(angle/180*Math.PI) * 10
+  self.timer = 0
+  self.toRemove = false
+  const super_update = self.update
+  self.update = function() {
+    if (self.timer++ > 100)
+        self.toRemove = true
+    super_update()
+  }
+  Bullet.list[self.id] = self
+  return self
+}
+
+Bullet.list = {}
+
+Bullet.update = function() {
+  if (Math.random() < 0.1) {
+    Bullet(Math.random() * 360)
+  }
+  let pack = []
+  for (let i in Bullet.list) {
+    const bullet = Bullet.list[i]
+    bullet.update()
+    pack.push({
+      x: bullet.x,
+      y: bullet.y
+    })
+  }
+  return pack
+}
+
+// I just added this after bullet.update(); and before pack.push(...); if (bullet.toRemove == true) delete Bullet.list[i];﻿
+
+// web socket
 io.on('connection', (socket) => {
   socket.id = Math.random()
   SOCKET_LIST[socket.id] = socket
 
   Player.onConnect(socket)
 
-  socket.on('disconnect', (socket) => {
+  socket.on('disconnect', () => {
     delete SOCKET_LIST[socket.id]
     Player.onDisconnect(socket)
+  })
+
+  socket.on('sendMsgToServer', (data) => {
+    const playerName = ("" + socket.id).slice(2, 7)
+    for (let i in SOCKET_LIST) {
+      SOCKET_LIST[i].emit('addToChat', playerName + ': ' + data)
+    }
   })
 })
 
 // game loop
 setInterval(function() {
-  var pack = Player.update()
+  const pack = {
+    player: Player.update(),
+    bullet: Bullet.update()
+  }
   for(let i in SOCKET_LIST) {
     const socket = SOCKET_LIST[i]
     socket.emit('newPosition', pack)
